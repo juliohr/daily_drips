@@ -4,6 +4,33 @@ import Html exposing (..)
 
 import Html.Attributes exposing (..)
 
+-- We need to import the `on` event from Html.Events, and we'll need keyCode
+-- later so let's add it as well.
+import Html.Events exposing (on, keyCode, onInput)
+-- We need to use a Json Decoder to extract our keyCode from the `on` event.
+-- For the most part we'll gloss over this for now - there are not many events
+-- where you actually need to use this early on.
+import Json.Decode as Json
+
+newTodo: ToDo
+newTodo =
+    { title = ""
+    , completed = False
+    , editing = False
+    }
+
+onEnter : Msg -> Attribute Msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                Json.succeed msg
+            else
+                Json.fail "not the right keycode"
+
+    in
+        on "keydown" (Json.andThen isEnter keyCode)
+
 type alias ToDo =
   { title : String
   , completed : Bool
@@ -19,10 +46,11 @@ type alias Model =
   }
 
 type Msg
-  = Add ToDo
+  = Add
   | Complete ToDo
   | Delete ToDo
   | Filter FilterState
+  | UpdateField String
 
 initialModel : Model
 initialModel =
@@ -42,7 +70,28 @@ initialModel =
 
 update : Msg -> Model -> Model
 update msg model =
-  model
+    case msg of
+        Add ->
+            { model 
+                | todos = model.todo :: model.todos
+                , todo = newTodo
+             }
+        Complete todo ->
+            model
+        Delete todo ->
+            model
+        Filter filterState ->
+            model
+        UpdateField str ->
+            let
+                todo =
+                    model.todo
+
+                updatedTodo =
+                    { todo | title = str }
+            in
+                { model | todo = updatedTodo }
+
 
 todoView : ToDo -> Html Msg
 todoView todo =
@@ -54,6 +103,8 @@ todoView todo =
             ]
         ]
 
+-- Now we'll wire up the onKeyPress event on our input field to use our
+-- handleKeyPress function
 view : Model -> Html Msg
 view model =
   div []
@@ -61,7 +112,15 @@ view model =
     , section [ class "todoapp" ]
         [ header [ class "header" ]
            [ h1 [] [ text "todos" ]
-           , input [ class "new-todo", placeholder "What needs to be done?", autofocus True ] []
+           , input 
+                [ class "new-todo"
+                , placeholder "What needs to be done?"
+                -- We'll explicitly set the value to the model's todo's title
+                , value model.todo.title
+                , autofocus True
+                , onInput UpdateField
+                , onEnter Add
+                ] []
            ]
         , section [ class "main" ]
             [ ul [ class "todo-list" ]
