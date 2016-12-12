@@ -5,13 +5,15 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (on, keyCode, onInput, onCheck, onClick)
 import Json.Decode as Json
 
-newTodo: ToDo
+
+newTodo : ToDo
 newTodo =
     { title = ""
     , completed = False
     , editing = False
     , identifier = 0
     }
+
 
 onEnter : Msg -> Attribute Msg
 onEnter msg =
@@ -21,59 +23,70 @@ onEnter msg =
                 Json.succeed msg
             else
                 Json.fail "not the right keycode"
-
     in
         on "keydown" (Json.andThen isEnter keyCode)
 
-type alias ToDo =
-  { title : String
-  , completed : Bool
-  , editing : Bool
-  , identifier :Int
-  }
 
-type FilterState = All | Active | Completed
+type alias ToDo =
+    { title : String
+    , completed : Bool
+    , editing : Bool
+    , identifier : Int
+    }
+
+
+type FilterState
+    = All
+    | Active
+    | Completed
+
 
 type alias Model =
-  { todos : List ToDo
-  , todo : ToDo
-  , filter : FilterState
-  , nextIdentifier : Int
-  }
+    { todos : List ToDo
+    , todo : ToDo
+    , filter : FilterState
+    , nextIdentifier : Int
+    }
+
 
 type Msg
-  = Add
-  | Complete ToDo
-  | Uncomplete ToDo
-  | Delete ToDo
-  | Filter FilterState
-  | UpdateField String
+    = Add
+    | Complete ToDo
+    | Uncomplete ToDo
+    | Delete ToDo
+    | Filter FilterState
+    | UpdateField String
+
 
 initialModel : Model
 initialModel =
-  { todos =
+    { todos =
         []
-  , todo =
-        { newTodo | identifier = 1
+    , todo =
+        { newTodo
+            | identifier = 1
         }
-  , filter = All
-  , nextIdentifier = 2
-  }
+    , filter = All
+    , nextIdentifier = 2
+    }
+
 
 filteredTodos : Model -> List ToDo
 filteredTodos model =
-  let matchesFilter =
-    case model.filter of
-      All ->
-        (\_ -> True)
+    let
+        matchesFilter =
+            case model.filter of
+                All ->
+                    (\_ -> True)
 
-      Active ->
-        (\todo -> todo.completed == False)
+                Active ->
+                    (\todo -> todo.completed == False)
 
-      Completed ->
-        (\todo -> todo.completed == True)
-  in
-    List.filter matchesFilter model.todos
+                Completed ->
+                    (\todo -> todo.completed == True)
+    in
+        List.filter matchesFilter model.todos
+
 
 update : Msg -> Model -> Model
 update msg model =
@@ -83,7 +96,8 @@ update msg model =
                 | todos = model.todo :: model.todos
                 , todo = { newTodo | identifier = model.nextIdentifier }
                 , nextIdentifier = model.nextIdentifier + 1
-             }
+            }
+
         Complete todo ->
             let
                 updateTodo thisTodo =
@@ -95,6 +109,7 @@ update msg model =
                 { model
                     | todos = List.map updateTodo model.todos
                 }
+
         Uncomplete todo ->
             let
                 updateTodo thisTodo =
@@ -109,10 +124,12 @@ update msg model =
 
         Delete todo ->
             { model
-              | todos = List.filter (\mappedTodo -> mappedTodo.identifier /= todo.identifier) model.todos
+                | todos = List.filter (\mappedTodo -> mappedTodo.identifier /= todo.identifier) model.todos
             }
+
         Filter filterState ->
             { model | filter = filterState }
+
         UpdateField str ->
             let
                 todo =
@@ -126,84 +143,94 @@ update msg model =
 
 todoView : ToDo -> Html Msg
 todoView todo =
-    let handleComplete =
-        case todo.completed of
-            True -> (\_ -> Uncomplete todo)
-            False -> (\_ -> Complete todo)
+    let
+        handleComplete =
+            case todo.completed of
+                True ->
+                    (\_ -> Uncomplete todo)
+
+                False ->
+                    (\_ -> Complete todo)
     in
-    li [ classList [ ( "completed", todo.completed ) ] ]
-        [ div [ class "view" ]
-            [ input [ class "toggle"
+        li [ classList [ ( "completed", todo.completed ) ] ]
+            [ div [ class "view" ]
+                [ input
+                    [ class "toggle"
                     , type_ "checkbox"
-                    , checked todo.completed 
+                    , checked todo.completed
                     , onCheck (handleComplete)
-                    ] 
+                    ]
                     []
-            , label [] [ text todo.title ]
-            , button 
-              [ class "destroy" 
-              , onClick (Delete todo)
-              ] 
-              []
+                , label [] [ text todo.title ]
+                , button
+                    [ class "destroy"
+                    , onClick (Delete todo)
+                    ]
+                    []
+                ]
             ]
-        ]
+
 
 filterItemView : Model -> FilterState -> Html Msg
 filterItemView model filterState =
-  li []
-  [ a
-    [classList [("selected", (model.filter == filterState) )]
-    , href "#"
-    , onClick (Filter filterState)
-    ]
-    [ text (toString filterState)]
-  ]
+    li []
+        [ a
+            [ classList [ ( "selected", (model.filter == filterState) ) ]
+            , href "#"
+            , onClick (Filter filterState)
+            ]
+            [ text (toString filterState) ]
+        ]
+
 
 view : Model -> Html Msg
 view model =
-  div []
-    [ node "style" [ type_ "text/css" ] [ text styles ]
-    , section [ class "todoapp" ]
-        [ header [ class "header" ]
-           [ h1 [] [ text "todos" ]
-           , input 
-                [ class "new-todo"
-                , placeholder "What needs to be done?"
-                , value model.todo.title
-                , autofocus True
-                , onInput UpdateField
-                , onEnter Add
-                ] []
-           ]
-        , section [ class "main" ]
-            [ ul [ class "todo-list" ]
-                (List.map todoView (filteredTodos model))
+    div []
+        [ node "style" [ type_ "text/css" ] [ text styles ]
+        , section [ class "todoapp" ]
+            [ header [ class "header" ]
+                [ h1 [] [ text "todos" ]
+                , input
+                    [ class "new-todo"
+                    , placeholder "What needs to be done?"
+                    , value model.todo.title
+                    , autofocus True
+                    , onInput UpdateField
+                    , onEnter Add
+                    ]
+                    []
+                ]
+            , section [ class "main" ]
+                [ ul [ class "todo-list" ]
+                    (List.map todoView (filteredTodos model))
+                ]
+            , footer [ class "footer" ]
+                [ span [ class "todo-count" ]
+                    [ strong [] [ text (toString (List.length (List.filter (\todo -> todo.completed == False) model.todos))) ]
+                    , text "items left"
+                    ]
+                , ul [ class "filters" ]
+                    [ filterItemView model All
+                    , filterItemView model Active
+                    , filterItemView model Completed
+                    ]
+                , button [ class "clear-completed" ] [ text "Clear completed" ]
+                ]
             ]
-        , footer [ class "footer"] 
-          [ span [ class "todo-count"]
-            [ strong [] [ text (toString (List.length (List.filter (\todo -> todo.completed == False) model.todos))) ]
-            , text "items left"
-            ]
-          , ul [ class "filters" ]
-            [ filterItemView model All
-            , filterItemView model Active
-            , filterItemView model Completed
-            ]
-          , button [ class "clear-completed" ] [ text "Clear completed" ]
-          ]
-       ]
-    ]
+        ]
+
 
 main =
-  Html.beginnerProgram
-    { model = initialModel
-    , update = update
-    , view = view
-    }
+    Html.beginnerProgram
+        { model = initialModel
+        , update = update
+        , view = view
+        }
+
 
 styles : String
 styles =
-  """
+    """
   html,
   body {
     margin: 0;
